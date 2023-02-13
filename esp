@@ -1,63 +1,66 @@
-#include <ESP8266WiFi.h>
+#include <PubSubClient.h> // Include the PubSubClient library
 
-// Pin definitions
-const int flowSensorPin = D1; // Pin connected to the flow sensor signal pin
-const int ledPin = D2; // Pin connected to an LED
+const char* ssid = "your_ssid"; // Your WiFi network SSID
+const char* password = "your_password"; // Your WiFi network password
+const char* mqttServer = "192.168.1.100"; // IP address of the MQTT broker
+const int mqttPort = 1883; // Port number of the MQTT broker
+const char* mqttUser = "your_mqtt_username"; // MQTT broker username (if required)
+const char* mqttPassword = "your_mqtt_password"; // MQTT broker password (if required)
 
-// WiFi settings
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
+WiFiClient espClient; // Create a WiFiClient object
+PubSubClient client(espClient); // Create a PubSubClient object, passing the WiFiClient object
 
-// Variables for storing the flow rate and total volume
-unsigned int flowRate;
-unsigned int flowMilliLitres;
-unsigned int totalVolume;
-unsigned long lastFlowRateCheck = 0;
+// Variables for reading the flow rate from the sensor
+int flowPin = 0; // The pin number connected to the flow sensor signal pin
+unsigned int flowCount = 0; // The number of pulses from the flow sensor
+unsigned long flowTime = 0; // The time in milliseconds when the flow sensor sends a pulse
+float flowRate = 0.0; // The calculated flow rate in liters per minute
 
 void setup() {
-  // Initialize the serial communication
-  Serial.begin(115200);
+  Serial.begin(115200); // Start the serial communication at 115200 baud rate
 
-  // Initialize the LED pin as output
-  pinMode(ledPin, OUTPUT);
-
-  // Connect to the WiFi network
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
+  WiFi.begin(ssid, password); // Connect to the WiFi network
+  while (WiFi.status() != WL_CONNECTED) { // Wait until the connection is established
+    delay(1000); // Delay for 1 second
     Serial.println("Connecting to WiFi...");
   }
   Serial.println("Connected to WiFi");
+
+  client.setServer(mqttServer, mqttPort); // Set the MQTT broker server and port
+  client.setCallback(callback); // Set the callback function that will be called when a message is received
+
+  // Initialize the flow sensor
+  pinMode(flowPin, INPUT); // Set the flowPin as an input pin
+  attachInterrupt(digitalPinToInterrupt(flowPin), flowSensorISR, RISING); // Attach the flowSensorISR function to the rising edge of the flow sensor pulse
 }
 
 void loop() {
-  // Check if it's time to measure the flow rate
-  if((millis() - lastFlowRateCheck) > 1000) {
-    // Measure the flow rate
-    flowRate = pulseIn(flowSensorPin, LOW);
-    
-    // Calculate the flow rate in milliliters per second
-    flowRate = (1000.0 / flowRate) * 60;
-    
-    // Calculate the total volume
-    flowMilliLitres = flowRate / 1000;
-    totalVolume += flowMilliLitres;
-    
-    // Print the results
-    Serial.print("Flow rate: ");
-    Serial.print(flowRate);
-    Serial.println(" mL/min");
-    Serial.print("Volume: ");
-    Serial.print(totalVolume);
-    Serial.println(" mL");
-    
-    // Update the time for the next measurement
-    lastFlowRateCheck = millis();
+  // Connect to the MQTT broker
+  if (!client.connected()) {
+    if (client.connect("ESP8266Client", mqttUser, mqttPassword)) {
+      Serial.println("Connected to MQTT broker");
+    } else {
+      Serial.println("Connection to MQTT broker failed");
+      return;
+    }
   }
-  
-  // Blink the LED to indicate the flow measurement
-  digitalWrite(ledPin, HIGH);
-  delay(100);
-  digitalWrite(ledPin, LOW);
-  delay(100);
+
+  // Publish the flow rate data to the "flowrate" topic
+  client.publish("flowrate", String(flowRate).c_str());
+
+  // Disconnect from the MQTT broker
+  client.disconnect();
+
+  // Code for other tasks and waiting goes here
 }
+
+// Interrupt Service Routine for the flow sensor
+void flowSensorISR() {
+  flowCount++; // Increment the flow count
+  flowTime = millis(); // Get the current time
+}
+
+// Function for calculating the flow rate
+void calculateFlowRate() {
+  unsigned long currentTime = millis(); // Get the current time
+  float time
