@@ -1,37 +1,45 @@
-#include <PubSubClient.h> // Include the PubSubClient library
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 
-const char* ssid = "your_ssid"; // Your WiFi network SSID
-const char* password = "your_password"; // Your WiFi network password
-const char* mqttServer = "192.168.1.100"; // IP address of the MQTT broker
-const int mqttPort = 1883; // Port number of the MQTT broker
-const char* mqttUser = "your_mqtt_username"; // MQTT broker username (if required)
-const char* mqttPassword = "your_mqtt_password"; // MQTT broker password (if required)
+// Replace with your WiFi credentials
+const char* ssid = "yourSSID";
+const char* password = "yourPassword";
 
-WiFiClient espClient; // Create a WiFiClient object
-PubSubClient client(espClient); // Create a PubSubClient object, passing the WiFiClient object
+// Replace with your MQTT broker credentials
+const char* mqttServer = "yourMQTTServer";
+const int mqttPort = 1883;
+const char* mqttUser = "yourMQTTUser";
+const char* mqttPassword = "yourMQTTPassword";
 
-// Variables for reading the flow rate from the sensor
-int flowPin = 0; // The pin number connected to the flow sensor signal pin
-unsigned int flowCount = 0; // The number of pulses from the flow sensor
-unsigned long flowTime = 0; // The time in milliseconds when the flow sensor sends a pulse
-float flowRate = 0.0; // The calculated flow rate in liters per minute
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+// Global variable to store the flow rate data
+float flowRate = 0;
+
+// Function to read the flow rate data from the water flow sensor module
+void readFlowRate() {
+  // Code to read the flow rate data from the water flow sensor module
+  // ...
+  
+  // Store the flow rate data in the global variable
+  flowRate = ...;
+}
 
 void setup() {
-  Serial.begin(115200); // Start the serial communication at 115200 baud rate
+  // Initialize serial communication
+  Serial.begin(115200);
 
-  WiFi.begin(ssid, password); // Connect to the WiFi network
-  while (WiFi.status() != WL_CONNECTED) { // Wait until the connection is established
-    delay(1000); // Delay for 1 second
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
     Serial.println("Connecting to WiFi...");
   }
   Serial.println("Connected to WiFi");
 
-  client.setServer(mqttServer, mqttPort); // Set the MQTT broker server and port
-  client.setCallback(callback); // Set the callback function that will be called when a message is received
-
-  // Initialize the flow sensor
-  pinMode(flowPin, INPUT); // Set the flowPin as an input pin
-  attachInterrupt(digitalPinToInterrupt(flowPin), flowSensorISR, RISING); // Attach the flowSensorISR function to the rising edge of the flow sensor pulse
+  // Set up the MQTT client
+  client.setServer(mqttServer, mqttPort);
 }
 
 void loop() {
@@ -45,22 +53,19 @@ void loop() {
     }
   }
 
+  // Read the flow rate data from the water flow sensor module
+  readFlowRate();
+
   // Publish the flow rate data to the "flowrate" topic
   client.publish("flowrate", String(flowRate).c_str());
 
   // Disconnect from the MQTT broker
   client.disconnect();
 
-  // Code for other tasks and waiting goes here
+  // Wait for 1 minute (60000 milliseconds)
+  delay(60000); 
 }
 
-// Interrupt Service Routine for the flow sensor
-void flowSensorISR() {
-  flowCount++; // Increment the flow count
-  flowTime = millis(); // Get the current time
-}
-
-// Function for calculating the flow rate
-void calculateFlowRate() {
-  unsigned long currentTime = millis(); // Get the current time
-  float time
+//espcode2 is a program that runs on an ESP8266 microcontroller and is used to read the flow rate data from a water flow sensor module and publish the data to a Raspberry Pi 4 using the MQTT protocol.
+The code sets up a connection to a WiFi network using the credentials specified in the ssid and password variables. It also sets up a connection to an MQTT broker using the credentials specified in the mqttServer, mqttPort, mqttUser, and mqttPassword variables.
+In the loop() function, the program first connects to the MQTT broker. If the connection is successful, the flow rate data is read from the water flow sensor module using the readFlowRate() function and published to the "flowrate" topic on the MQTT broker. After publishing the data, the program disconnects from the MQTT broker and waits for 1 minute before repeating the process.//
